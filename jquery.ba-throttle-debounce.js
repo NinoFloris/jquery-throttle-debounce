@@ -60,16 +60,46 @@
 // the `Cowboy` namespace. Usage will be exactly the same, but instead of
 // $.method() or jQuery.method(), you'll need to use Cowboy.method().
 
-(function(window,undefined){
+/** Slightly tweaked UMD function (Universal Module Definition).*/
+(function(requires, cjsrequires, factory) {
+  '$:nomunge'; // Used by YUI compressor.
+  // Turn off strict mode hinting, we may need to assign globals.
+  /* jshint strict: false */
+
+  if (typeof cjsrequires === 'function') {
+    factory = cjsrequires;
+    cjsrequires = requires;
+  } 
+
+  // AMD
+  if (typeof define === 'function' && define.amd) {
+    define(requires, factory); 
+
+  // CommonJS    
+  } else if (typeof exports === 'object') {   
+    for (var i = 0; i < cjsrequires.length; i++) {
+      cjsrequires[i] = require(cjsrequires[i]);
+    }     
+    module.exports = factory.apply(this, cjsrequires);
+
+  // Global
+  } else {
+    factory(window.jQuery || window.Cowboy);
+  }
+}([], function(require, $){
   '$:nomunge'; // Used by YUI compressor.
   
-  // Since jQuery really isn't required for this plugin, use `jQuery` as the
-  // namespace only if it already exists, otherwise use the `Cowboy` namespace,
-  // creating it if necessary.
-  var $ = window.jQuery || window.Cowboy || ( window.Cowboy = {} ),
-    
-    // Internal method reference.
-    jq_throttle;
+  // Used when throttle is in a module based environment.
+  if (!$) {
+    $ = {};
+    $.guid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+      return v.toString(16);
+    });
+  }
+
+  // Internal method reference.
+  var jq_throttle;
   
   // Method: jQuery.throttle
   // 
@@ -186,9 +216,7 @@
     // Set the guid of `wrapper` function to the same of original callback, so
     // it can be removed in jQuery 1.4+ .unbind or .die by using the original
     // callback as a reference.
-    if ( $.guid ) {
-      wrapper.guid = callback.guid = callback.guid || $.guid++;
-    }
+    wrapper.guid = callback.guid = callback.guid || $.guid++;
     
     // Return the wrapper function.
     return wrapper;
@@ -249,4 +277,5 @@
       : jq_throttle( delay, callback, at_begin !== false );
   };
   
-})(this);
+  return $;
+}));
